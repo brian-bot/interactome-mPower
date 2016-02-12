@@ -2,61 +2,121 @@
   <meta charset="utf-8">
   <style>
   
+  .dragFiller {
+    background-color: transparent;
+    pointer-events: all;
+  }
+
+  svg{
+    fill: none;
+  }
   .node circle {
     fill: #fff;
-      stroke: steelblue;
+    stroke: steelblue;
     stroke-width: 1px;
   }
 
-.node {
-  font: 10px sans-serif;
-}
+  .node {
+    font: 10px sans-serif;
+  }
 
-.link {
-  fill: none;
-  stroke: #ccc;
+  .link {
+    fill: none;
+    stroke: #ccc;
     stroke-width: 1.5px;
-}
+  }
 
-div.nodeinfo {   
-  position: absolute;           
-  text-align: left;           
-  width: 200px;                  
-  height: auto;                 
-  padding: 2px;             
-  font: 12px sans-serif;        
-  background: lightsteelblue;   
-  border: 1px;      
-  border-radius: 8px;           
-}
+  text {
+    fill: black;
+  }
 
+  div.nodeinfo {   
+    position: absolute;           
+    text-align: left;           
+    width: 200px;                  
+    height: auto;                 
+    padding: 2px;             
+    font: 12px sans-serif;        
+    background: lightsteelblue;   
+    border: 1px;      
+    border-radius: 8px;           
+  }
 
 </style>
   <body>
-  <h2>AACR 2014: Ras special conference</h2>
-  <h3>RAS Interactome</h3>
+  <h2>RAS Oncogenes: From biology to therapy</h2>
+  <h3>AACR 2014, RAS special conference</h3>
   <div id="topbar">
-  Similarity: 
-  <select onchange="changeView(this)">
-    <option value="byText">by abstract</option>
-    <option value="byLocation">by location</option>
-    <option value="byCategory">by category</option>
-  </select>
-  &nbsp;
-    Presenter Search (last name): <input type="text" id="searchInput"></input>  <i>Click on a node to view abstract.</i>
+    <div style="display: table-cell">
+      Similarity: 
+      <select onchange="changeView(this)">
+        <option value="byText">by abstract</option>
+        <option value="byLocation">by location</option>
+        <option value="byCategory">by category</option>
+      </select>
+      <br/>
+      <em>Click on a node to view abstract.</em>
+    </div>
+    <div style="display: table-cell; padding-left:1em;">
+      
+        <input type="text" id="searchInput" onchange ="searchWord()"></input> 
+        <input type="button" onclick="searchWord()" value ="Search"></input>
+        <br/>
+        <input type="checkbox" id="lastName" checked>Last Name</input>
+        <input type="checkbox" id="aNumber" checked>Abstract Number</input>
+        <input type="checkbox" id="title" checked>Title</input>
+      
+    </div>
+    
+    <!--Presenter Search (last name): <input type="text" id="searchInput"></input>  <em>Click on a node to view abstract.</em> -->
+  </div>
+  <div style="font-family: Arial Black; font-size: 8px; color: black">
+    <table width="100%">
+    <tr>
+        <td id="code1.0">RAS/MAPK pathway</td>
+        <td id="code1.1">RAS models</td>
+        <td id="code1.2">Early translational</td>
+        <td id="code1.3">Late translational</td>
+        <td id="code5">Drug discovery</td>
+    </tr>
+    <tr>
+      <td id="code3">RAS isoforms (wt) effects</td>
+      <td id="code7">RAS isoforms drug sensitivity</td>
+      <td id="code2">Drug combos/population identification</td>
+      <td id="code6">Sequencing studies</td>
+      <td id="code4">Resistance/clonal evolution</td>
+    </tr>
+    </table>
+    Nodes with red border are clinical
   </div>
   <div id="dialog" title="Abstract text" style="font-size: 12px"></div>
   <div id="canvas"></div>
-  <div>Sage Bionetworks; Justin Guinney and Rodrigo Dientsmann; justin.guinney@sagebase.org</div>
-  <script src="d3-3.5.13.min.js"></script>
+  <div style="font-family: Arial Black; font-size: 10px; color: black">Justin Guinney, Rodrigo Dientsmann, and Stephen Friend; Sage Bionetworks, Seattle, WA <br/>
+    Send questions/comments to justin.guinney@sagebase.org
+  </div>
+  <script src="d3.v3.min.js"></script>
   <link type="text/css" href="jquery-ui-1.10.4.custom/css/ui-lightness/jquery-ui-1.10.4.custom.min.css" rel="stylesheet"/>
-  <script type="text/javascript" src="jquery-1.12.0.min.js"></script>
+  <script type="text/javascript" src="jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
   <script type="text/javascript" src="jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js"></script>
   <script>
   
-  
-var diameter = 800;
+var codes = ["1.0","1.1","1.2","1.3","2","3","4","5","6","7"];
+var codeIdxMap = {};
+for(var i = 0; i < codes.length; ++i){
+  codeIdxMap[codes[i]] = i;
+}
+var color =  d3.scale.category20();
+
+for(var i = 0; i < codes.length; ++i){
+  document.getElementById("code" + codes[i]).style.backgroundColor = color4code(codes[i]);
+}
+
+// Graph
+var diameter = 960;
 var radius = 2.5, radiusLarge = 6.0;
+
+x = d3.scale.linear().domain([0, diameter]).range([diameter,0]);
+y = d3.scale.linear().domain([0, diameter]).range([diameter,0]);
 
 var tree = d3.layout.tree()
     .size([360, diameter / 2 - 120])
@@ -65,42 +125,98 @@ var tree = d3.layout.tree()
 var diagonal = d3.svg.diagonal.radial()
     .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
 
+var zoom = d3.behavior.zoom().x(x).y(y)
+  .scaleExtent([1, 3])
+  .on("zoom", function() {
+    svg.attr("transform", "translate(" + d3.event.translate + ") scale( " + d3.event.scale + ")");
 
-var codes = ["1.0","1.1","1.2","1.3","2","3","4","5","6","7","8","9"];
-var codeIdxMap = {};
-for(var i = 0; i < codes.length; ++i){
-  codeIdxMap[codes[i]] = i;
-}
-var color =  d3.scale.category20();
-
-
-function color4code(code){
-  return color(codeIdxMap[code]);
-}
+});
 
 var svg = d3.select("#canvas").append("svg")
     .attr("width", diameter)
     .attr("height", diameter)
     .append("g")
-    .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
+    .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")")
+    .call(zoom)
+
+
+svg.append("rect")
+  .attr({
+    'class': 'dragFiller',
+    'width': diameter,
+    'height': diameter,
+    'x': -diameter/2,
+    'y': -diameter/2
+  }); 
+  
 
 var svglinks = svg.append("g");
 
+d3.json("TEST_RASconf_txt.json", function(error, root) {
+  update(root);  
+});
+
 var div = d3.select("body").append("div")   
   .attr("class", "nodeinfo")               
-  .style("opacity", 0);
+  .style("opacity", 0)
+
+$("#dialog").dialog({
+  autoOpen: false,
+  modal: true,
+  width: 600,
+  height: 300,
+  buttons: {
+    "Dismiss": function() {
+      $(this).dialog("close");
+    }
+  }
+});
+
+// Search function
+function searchWord(){
+  var txt = $('#searchInput').val().toLowerCase();
+  re = new RegExp(txt,"ig");
+  if(txt.length > 1){
+    if($('input[type = "checkbox"]:checked').length < 1){
+      alert("Please choose a category to search");
+    }
+    d3.selectAll(".nodeText").each(function(d){
+      if(d.presenterLast){
+        var match1 = false;
+        var match2 = false;
+        var match3 = false;
+        if($('#lastName').is(":checked")){
+          match1 = re.test(d.presenterLast);
+        }
+        if($('#aNumber').is(":checked")){
+          match2 = re.test(d.name);
+        }
+        if($('#title').is(":checked")){
+          match3 = re.test(d.title);
+        }
+        var match = match1 || match2 || match3;
+        d3.select(this).style("fill", match ? "red" : "black");
+        d3.select(this).style("font-weight", match ? "bold" : "normal");
+      }
+    })
+  }
+}
+
+function color4code(code){
+  return color(codeIdxMap[code]);
+}
 
 function changeView(type){
   var jsonFile;
   switch(type.value){
     case "byLocation":
-      jsonFile = "RASconf_geo.json";
+      jsonFile = "RASconf_geo_test1.json";
       break;
     case "byCategory":
-      jsonFile = "RASconf_cat.json";
+      jsonFile = "TEST_RASconf_cat.json";
       break;
     default:
-      jsonFile = "RASconf_txt.json";
+      jsonFile = "RASconf_txt_test1.json";
       break;
   }
   d3.json(jsonFile, function(error, root) {
@@ -115,24 +231,20 @@ function hideToolTip(){
     .style("top", -1000 + "px");
 }
 
-function showTooltip(d){
+function showTooltip(d,str){
   div.style("opacity", .9);
-    
-  var str = "<b>" + d.title + "</b><br/>";
-  str += d.presenterFirst + " " + d.presenterLast + "<br/>";
-  str += d.presenterInstitution + "<br/>";
-  str += d.presenterCity + ", " + d.presenterCountry + "<br/>";
   div.html(str)
     .style("left", (d3.event.pageX + 28) + "px")     
     .style("top", (d3.event.pageY - 28) + "px");
-//    <b>keywords:&nbsp;</b>NA<br> <a class=\"clicks\" href=\"#\" onclick=\"javascript:showAbstract(\'"
-//             + d.name + "','" + d.title +"');\">Abstract</a>"
 }
 
 function update(root){
   var nodes = tree.nodes(root),
       links = tree.links(nodes);
-  
+
+  var maxDepth = getDepth(root);
+  var typeSim = $("option:selected").val();
+
   svglinks.selectAll(".link").remove();
   
   var link = svglinks.selectAll(".link")
@@ -142,7 +254,7 @@ function update(root){
       .attr("d", diagonal);
   
   var node = svg.selectAll(".node")
-    .data(nodes, function(d) { return d.id; })
+    .data(nodes, function(d) { return d.id; });
     
   node.selectAll("text").remove()
   
@@ -150,18 +262,28 @@ function update(root){
   
   enter.append("circle")
     .attr("r", radius)
+    .attr("id", function(d){return d.id})
     .style('fill', function(d) { return color4code(d.sageCode); })
     .style('stroke',function(d) { return d.phase == "pre" ? "":"red"})
-    .on("mouseover", function(d) {  
+    .on("mouseover", function(d) {
       d3.select(this).attr("r", radiusLarge);
-      showTooltip(d);
+      var str = d.name;
+      if(d.depth == maxDepth-1){  
+        str = "<b>" + d.title + "</b><br/>";
+        str += d.presenterFirst + " " + d.presenterLast + "<br/>";
+        str += d.presenterInstitution + "<br/>";
+        str += d.presenterCity + ", " + d.presenterCountry + "<br/>";
+      }
+      showTooltip(d,str);
     })
     .on("mouseout", function(d) {
       d3.select(this).attr("r", radius);
-      hideToolTip();
+        hideToolTip();
     })
     .on("click", function(d){
-      showAbstract(d.name, d.title);
+      if(d.depth == maxDepth-1){
+        showAbstract(d.name, d.title, d.keywords);
+      }
     });
   
   
@@ -183,49 +305,25 @@ function update(root){
   node.exit().remove();  
 }
 
-
-d3.json("RASconf_txt.json", function(error, root) {
-  update(root);  
-});
-
-
-
-//d3.select(self.frameElement).style("height", height + "px");
-
-$("#dialog").dialog({
-  autoOpen: false,
-  modal: true,
-  width: 600,
-  height: 300,
-  buttons: {
-    "Dismiss": function() {
-      $(this).dialog("close");
-    }
-  }
-});
-
-$('#searchInput').change(function(event) {
-  var txt = this.value.toLowerCase();
-  if(txt.length > 2){
-    d3.selectAll(".nodeText").each(function(d){
-      if(d.presenterLast){
-        var match = d.presenterLast.toLowerCase().substring(0, txt.length) === txt;
-        d3.select(this).style("fill", match ? "red" : "black");
-        d3.select(this).style("font-weight", match ? "bold" : "normal");
-      }
-    })
-  }
-});
-
-
-function showAbstract(id, title){
-  
+function showAbstract(id, title, keywords){
   $("#dialog").html("Loading....");
   $("#dialog").dialog("option", "title", id).dialog("open");
   d3.json("json/" + id + ".json", function(error, root){
-    $("#dialog").html("<b>" + title + "</b><br/>"+ root.authors + "<p/>" + root.text);
+    $("#dialog").html("<b>" + title + "</b><br/>"+ root.authors + "<p/>" + root.text +"<br/><br/><strong>KEYWORDS:</strong> "+keywords);
   });
 }
 
+function getDepth(obj) {
+    var depth = 0;
+    if (obj.children) {
+        obj.children.forEach(function (d) {
+            var tmpDepth = getDepth(d);
+            if (tmpDepth > depth) {
+                depth = tmpDepth;
+            }
+        })
+    }
+    return 1 + depth;
+}
 
 </script>
