@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+  <head>
+  </head>
+  <style>
+    label {
+        font: 12px sans-serif;
+    }
+    .node circle {
+        fill: #fff;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+    }
+    .node {
+        font: 12px sans-serif;
+    }
+    .link {
+        fill: none;
+        stroke: #000000;
+        stroke-width: 1.5px;
+    }
+
+    div.nodeinfo {   
+      position: absolute;           
+      text-align: left;           
+      width: 200px;                  
+      height: auto;                 
+      padding: 2px;             
+      font: 12px sans-serif;        
+      background: lightsteelblue;   
+      border: 1px;      
+      border-radius: 8px;           
+    }
+
+    div#canvas {
+      border: 1px solid black;
+      background-color: #EEF0F3;
+      margin: 2em;
+      margin-top: 0em;
+      width: 1000px;
+    }
+
+    .ui-widget-header {
+      border: 1px solid #6898c3 !important;
+      background: #75abdb !important;
+      color: #fff !important;
+  }
+
+   .subpage{
+      padding: 0.1em;
+      display: table-cell;
+      float:left;
+      padding-right:1em;
+    }
+    .subpage:hover{
+      border: 1px solid black;
+    }
+
+    .subpage > span {
+      vertical-align: super;
+    }
+    dt {
+      float: left;
+      width: 25%;
+      background: lightsteelblue;
+      padding: 0;
+      margin: 0;
+      font-weight: bold;
+    }
+    dd {
+      float: left;
+      width: 75%;
+      padding: 0;
+      margin: 0
+    }
+    dl{
+      font-size: 0.8em;
+      width:270px;
+    }
+  </style>
+  <body>
+    <h2>AACR 2016: Small Molecules Immunotherapies Interactome</h2>
+    <h4></h4>
+    <div class="subpage abstract">
+      <img src="image/doc.png" width="30"><span>Abstract</span>
+    </div>
+    <div class="subpage location">
+      <img src="image/location.png" width="30"><span>Location</span>
+    </div>
+    <div class="subpage category">
+      <img src="image/category.png" width="30"><span>Category</span>
+    </div>
+    <div class="ui-widget" style="display: table-cell;float:left;margin-left: 1em;">
+      <label for="search" style="font-size:1.2em;">Search:</label>
+      <div id="search" style="width:15em;"></div>
+    </div>
+    <div style="float:left; border:1px black solid;margin-left:2em; padding:0.3em;">
+      <p><em><strong>Sage Category Description:</em></strong></p>
+        <dl>
+          <dt>small</dt>
+            <dd>Small Molecule Immunotherapeutics</dd>
+          <dt>Combo CPI</dt>
+            <dd>Combination checkpoint inhibitor</dd>
+          <dt>ADC</dt>
+            <dd>Antibody-Drug Conjugates</dd>
+        </dl>
+    </div>
+  <br/>
+    <div style="font-family: Arial Black; font-size: 8px; color: black">
+  </div>
+    <div id="dialog" title="Abstract text" style="font-size: 12px"></div>
+    <div style="clear:both; margin-left: 2em;font-style:italic;">
+      <br/>
+      <span>Click on the parent node to view the locations.</span>
+      <br/>
+      <span>Click on the child node to view the abstract.</span>
+    </div>
+    <div id="canvas"></div>
+    <div>Sage Bionetworks; Justin Guinney and Rodrigo Dientsmann; justin.guinney@sagebase.org</div>
+  </body>
+  <script src="d3.v3.min.js"></script>
+  <script type="text/javascript" src="jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+  <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/select2/3.5.0/select2.min.css"></link>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/select2/3.5.0/select2.min.js"></script>
+  <script type="text/javascript" src="functionRepo.js"></script>
+  <script>
+
+  $("#dialog").dialog({
+    autoOpen: false,
+    modal: true,
+    width: 600,
+    height: 300,
+    buttons: {
+      "Dismiss": function() {
+        $(this).dialog("close");
+      }
+    }
+  });
+
+  var margin = {top: 20, right: 120, bottom: 20, left: 120},
+      width = 1000 - margin.left - margin.right,
+      height = 2750 - margin.top - margin.bottom;
+
+  var radiusOriginal = 4.5,
+      radiusLarge = 6.0;
+
+  var diameter = 900;
+  var duration = 700;
+  var i = 0;
+
+  function elbow(d, i) {
+    return "M" + d.source.y + "," + d.source.x
+        + "V" + d.target.x + "H" + d.target.y;
+  }
+
+  var root; // store data in a variable accessible by all functions
+  var select2_data;
+  var cluster = d3.layout.cluster()
+      .size([height, width - 160]);
+  var xLocation = 0;
+  var searchText = window.location.hash.substring(1);
+
+  var diagonal = d3.svg.diagonal()
+      .projection(function (d) {
+      return [d.y, d.x];
+  });
+
+  var div = d3.select("body").append("div")   
+  .attr("class", "nodeinfo")               
+  .style("opacity", 0)
+
+  var svg = d3.select("#canvas").append("svg")
+      .attr("width", width + margin.right + margin.left)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+d3.json("aacr2016_txt.json", function(error, json) {
+    root = json;
+    root.x0 = height/2;
+    root.y0 = 0;
+    update(root);
+
+    select2_data = extract_select2_data(root,[],0)[1];
+    select2_data.sort(function(a, b) {
+      var string1 = a.text;
+      var string2 = b.text;
+      return (string1 > string2) - (string1 < string2);
+    });
+  var holder = "Name/Abstract ID";
+  if(searchText){
+    searchTree();
+    select2_data.forEach(function(dat){
+      if(dat.id == searchText){
+        holder = dat.text;
+      }
+    });
+  }
+
+  $("#search").select2({
+      placeholder: holder,
+      data: select2_data,
+      containerCssClass: "search"
+    });
+
+  //attach search box listener
+  $("#search").on("select2-selecting", function(e) {
+    searchText = e.object.id;
+    searchTree();
+  })
+});
+
+
+function searchTree() {
+    re = new RegExp(searchText,"ig");
+    if(searchText.length > 1){
+      d3.selectAll(".node").each(function(d){
+          var match = false;
+          match = re.test(d.presenterLast+", "+d.presenterFirst+" ("+d.name+")");
+          if(match){
+             // Walk parent chain
+            var ancestors = [];
+            var parent = d;
+            while (typeof(parent) !== "undefined") {
+                ancestors.push(parent);
+                parent.class = "found";
+                parent = parent.parent;
+            }
+          }
+          d3.select(this).style("fill", match ? "red" : "black");
+          d3.select(this).style("font-weight", match ? "bold" : "normal");
+          if(match && !d.children){
+            xLocation = d.x;
+          }
+      })
+    }
+    update(root);
+    $('html, body').animate({
+              scrollTop: xLocation,
+              scrollLeft: 0
+            }, 1000);
+}
+
+// update 
+function update(source) {
+    // Compute the new tree layout.
+    var nodes = cluster.nodes(root).reverse(),
+    links = cluster.links(nodes);
+
+    // Update the nodes
+    var node = svg.selectAll("g.node")
+      .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+    // Enter any new nodes at the parent's previous position.
+    var nodeEnter = node.enter().append("g")
+      .attr("class", "node")
+    .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+    .on("click",function(d){
+      if(d.children){
+          var url = 'location.html'+'#'+d.name;
+          if(searchText){
+            url += '#'+searchText;
+          }
+          window.location.href = url;
+        }else{
+          showAbstract(d);
+        }
+      });
+
+
+    nodeEnter.append("circle")
+      .attr("r", radiusOriginal)
+      .on("mouseover", function(d) {
+        d3.select(this).attr("r", 8);
+        if(d.presenterLast){
+          var str;
+          str = "<b>" + d.title + "</b><br/>";
+          str += d.presenterFirst + " " + d.presenterLast + "<br/>";
+          str += d.presenterInstitution + "<br/>";
+          str += d.presenterCity + ", " + d.presenterCountry + "<br/>";
+          str += "<strong>AACR category:</strong> "+d.category + "<br/>";
+          str += "<strong>Sage category:</strong> "+d.sage + "<br/>";
+          str += "<strong>Mechanism of Action:</strong> "+d.moa;
+        
+          showTooltip(d,str);
+        }
+      })
+      .on("mouseout", function(d) {
+        d3.select(this).attr("r", function(d){return d._children? radiusLarge : radiusOriginal;});
+        hideToolTip();
+      });
+  
+    nodeEnter.append("text")
+      .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+      .attr("dy", ".35em")
+      .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+      .text(function(d){return d.presenterLast ? (d.presenterLast+", "+d.presenterFirst) : ""})
+      .style("fill-opacity", 1e-6);
+
+    // Transition nodes to their new position.
+    var nodeUpdate = node.transition()
+      .duration(duration)
+      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+    nodeUpdate.select("circle")
+      .attr("r", function(d){return d._children? radiusLarge : radiusOriginal;})
+      .style("fill", "#fff");
+
+    nodeUpdate.select("text")
+      .style("fill-opacity", 1);
+
+    // Transition exiting nodes to the parent's new position.
+    var nodeExit = node.exit().transition()
+      .duration(duration)
+      .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+      .remove();
+
+    nodeExit.select("circle")
+      .attr("r", 1e-6);
+
+    nodeExit.select("text")
+      .style("fill-opacity", 1e-6);
+
+    // Update the links
+    var link = svg.selectAll("path.link")
+      .data(links, function(d) { return d.target.id; });
+
+    // Enter any new links at the parent's previous position.
+    link.enter().insert("path", "g")
+      .attr("class", "link")
+      .attr("d", function(d) {
+        var o = {x: source.x0, y: source.y0};
+        return diagonal({source: o, target: o});
+      });
+
+    // Transition links to their new position.
+    link.transition()
+      .duration(duration)
+      .attr("d",elbow)
+      .style("stroke",function(d){
+        if(d.target.class==="found"){
+          return "#ff4136";
+        }else{
+          return "#000000";
+        }
+      })
+      .style("stroke-width",function(d){
+        if(d.target.class==="found"){
+          d.target.class = "undefined";
+          return "4px";
+        }else{
+          return "1.5px";
+        }
+      });
+
+    // Transition exiting nodes to the parent's new position.
+    link.exit().transition()
+      .duration(duration)
+      .attr("d", function(d) {
+        var o = {x: source.x, y: source.y};
+        return diagonal({source: o, target: o});
+      })
+      .remove();
+
+    // Stash the old positions for transition.
+    nodes.forEach(function(d) {
+      d.x0 = d.x;
+      d.y0 = d.y;
+      });
+}
+
+$('.abstract').on('click',function(){
+  window.location.href = 'abstract.html';
+})
+
+$('.location').on('click',function(){
+  var url = 'location.html';
+  if(searchText){
+    url += '#'+searchText;
+  }
+  window.location.href = url;
+})
+
+$('.category').on('click',function(){
+  var url = 'category.html';
+  if(searchText){
+    url += '#'+searchText;
+  }
+  window.location.href = url;
+})
+
+  </script>
+
+</html>

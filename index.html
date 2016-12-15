@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+  <head>
+  </head>
+  <style>
+    div#canvas {
+      clear: both;
+      margin: 2em;
+      width: 1000px;
+    }
+
+    div.section{
+      border: 1px solid black;
+      margin: 0.5em;
+      height: 5em;
+      
+    }
+
+    .section > p, .section > ul{
+      float: left;
+      margin-right: 3em;
+      padding-left: 1em;
+    }
+
+    .section.abstract{
+      background-color:#EEF0F3;
+    }
+
+    .section.abstract:hover{
+      background-color: lightsteelblue;
+    }
+
+    .section.location{
+      background-color: lightgrey;
+    }
+
+    .section.location:hover{
+      background-color: #a8aeb2;
+    }
+
+    .section.category{
+      background-color: rgba(224, 220, 198, 0.42);
+    }
+
+    .section.category:hover{
+      background-color: #edd49a;
+    }
+
+    .subpage{
+      padding: 0.1em;
+      display: table-cell;
+      float:left;
+      padding-right:1em;
+    }
+    .subpage:hover{
+      border: 1px solid black;
+    }
+
+    .subpage > span {
+      vertical-align: super;
+    }
+  </style>
+  <body>
+    <h2>AACR 2016: Small Molecules Immunotherapies Interactome</h2>
+    <h4></h4>
+    <div class="subpage abstract">
+      <img src="image/doc.png" width="30"><span>Abstract</span>
+    </div>
+    <div class="subpage location">
+      <img src="image/location.png" width="30"><span>Location</span>
+    </div>
+    <div class="subpage category">
+      <img src="image/category.png" width="30"><span>Category</span>
+    </div>
+  <br/>
+    <div id="canvas">
+      <span>169 abstracts are selected using small molecules immunotherapies keywords.<span>
+      <div class="section abstract">
+        <p style="font-size: 1.5em;font-weight:bold">Abstract</p>
+        <p>The similarity of abstracts</p>
+      </div>
+      <div class="section location">
+        <p style="font-size: 1.5em;font-weight:bold">Location</p>
+        <p>A world map displays presenters' locations.</p>
+      </div>
+      <div class="section category" class="category">
+        <p style="font-size: 1.5em;font-weight:bold">Category</p>
+        <p>2 different categories: </p>
+          <ul>
+            <li>AACR category</li>
+            <li>Sage category</li>
+            <!--<li>MoA (Mechanism of Action)</li>-->
+          </ul>
+        
+      </div>
+    </div>
+    <div>Sage Bionetworks; Justin Guinney and Rodrigo Dientsmann; justin.guinney@sagebase.org</div>
+  </body>
+  <script src="d3.v3.min.js"></script>
+  <script type="text/javascript" src="jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
+  <script type="text/javascript" src="functionRepo.js"></script>
+  <script>
+  $('.abstract').on('click',function(){
+    window.location.href = 'abstract.html';
+  })
+  $('.location').on('click',function(){
+    window.location.href = 'location.html';
+  })
+  $('.category').on('click',function(){
+    window.location.href = 'category.html';
+  })
+  </script>
+</html>
