@@ -1,13 +1,7 @@
-library(tm)
-library(slam)
+require(tm)
+require(slam)
 
-abstract.stop.words <- c("cancer","express","studi","activ","result",
-                         "increas","gene","protein","level","signific",
-                         "compar","associ","develop","analysi","use","observ",
-                         "demonstr","found","includ","determin","suggest","conclusion",
-                         "background","effect","identifi","data","potenti","method","may",
-                         "evalu","perform","assess","show","shown","can","howev","one","two","report",
-                         "also")
+abstract.stop.words <- c("mpower", "data", "will", "disease", "use", "using", "research", "can", "analysis", "based", "parkinsons", "also", "study", "like", "mobile", "models", "parkinsonâ\u0080\u0099s", "used", "goal", "intend", "plan", "well", "access", "app", "interested", "working", "collected", "dataset", "methods", "help", "parkinson", "provide", "develop", "model", "techniques", "work", "assess", "different", "evaluate", "investigate", "order", "project", "find", "results", "test", "whether", "aim", "available", "build", "explore", "including", "part", "science", "analyze", "apply", "include", "new" ,"application", "insight", "patient", "useful", "currently")
 
 concatenate_and_split_hyphens <- function(x){
   gsub("\\s(\\w+)-(\\w+)\\s"," \\1\\2 \\1 \\2 ",x)
@@ -135,20 +129,7 @@ HCtoJSON<-function(hc){
 }
 
 listNodeInfo <- function(id){
-  title <- sub("\"","<q>",df[id,"ABSTRACT.TITLE"])
-  title <- sub("\"","</q>",title)
-  L <- paste0('name =\"',id,'\",',
-              'title=\"',title,'\",',
-              'presenterFirst=\"',df[id,"PRESENTER.FIRST"],'\",',
-              'presenterLast=\"',df[id,"PRESENTER.LAST"],'\",',
-              'presenterInstitution=\"',df[id,"PRESENTER.INSTITUTION"],'\",',
-              'presenterCity=\"',df[id,"PRESENTER.CITY"],'\",',
-              'presenterCountry=\"',df[id,"PRESENTER.COUNTRY"],'\",',
-              'keywords=\"',paste(df[id,"KEYWORD1"],df[id,"KEYWORD2"],df[id,"KEYWORD3"],df[id,"KEYWORD4"],sep=";"),'\",',
-              'sage=\"',df[id,"category_interactome1_general"],'\",',
-              'moa=\"',df[id,"category_interactome3_moa_small"],'\",',
-              'des=\"',df[id,"category_interactome2_description_small"],'\",',
-              'category=\"',df[id,"CategoryDes"],'\"')
+  L <- paste0('name =\"',id,'\"')
   return(L)
 }
 
